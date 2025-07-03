@@ -1,0 +1,125 @@
+/* Responsive Styles for AHP MOD Reseller Landing Page */
+
+/* Large screens (up to 1200px) */
+@media (max-width: 1200px) {
+    .container {
+        max-width: 90%;
+    }
+}
+
+/* Medium screens (up to 992px) */
+@media (max-width: 992px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.2rem;
+    }
+    
+    .benefits-grid, .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .section-title {
+        font-size: 2rem;
+    }
+}
+
+/* Small screens (up to 768px) */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.1rem;
+    }
+    
+    .section-title {
+        font-size: 1.8rem;
+    }
+    
+    .section-description {
+        font-size: 1rem;
+    }
+    
+    .benefit-title {
+        font-size: 1.3rem;
+    }
+    
+    .benefit-icon {
+        height: 100px;
+        font-size: 3rem;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+    }
+    
+    .final-cta-headline {
+        font-size: 2rem;
+    }
+}
+
+/* Extra small screens (up to 576px) */
+@media (max-width: 576px) {
+    .hero-title {
+        font-size: 1.8rem;
+        padding: 1rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+        padding: 0 1rem;
+    }
+    
+    .benefits-grid, .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .benefit-card, .stat-card {
+        margin-bottom: 1.5rem;
+    }
+    
+    .final-cta-headline {
+        font-size: 1.8rem;
+    }
+    
+    .final-cta-subheadline {
+        font-size: 1.1rem;
+        padding: 0 1rem;
+    }
+    
+    .final-cta-subtext {
+        padding: 0 1rem;
+    }
+}
+
+/* Fix for very small screens */
+@media (max-width: 400px) {
+    .hero-title {
+        font-size: 1.5rem;
+    }
+    
+    .benefit-icon {
+        height: 80px;
+        font-size: 2.5rem;
+    }
+    
+    .benefit-title {
+        font-size: 1.2rem;
+    }
+    
+    .benefit-description {
+        font-size: 0.9rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+    }
+}

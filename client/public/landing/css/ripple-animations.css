@@ -1,0 +1,23 @@
+/* Additional Animation Keyframes for Enhanced Interactions */
+
+/* Ripple Animation */
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Enhanced Badge Shine Effect - Removed for clean visibility */
+
+/* Scroll Progress Indicator Styles - REMOVED */
+/* All scroll progress indicator styles have been removed */
+
+/* Enhanced Section Hover Effects */
+
+
+/* Badge Shine Animation - Removed for clean visibility */

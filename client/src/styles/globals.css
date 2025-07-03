@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import './brand.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-light text-dark font-inter;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-montserrat;
+}
+
+/* Gradient backgrounds */
+.bg-primary-gradient {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+  background-size: 200% 200%;
+}
+
+.bg-secondary-gradient {
+  background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+  background-size: 200% 200%;
+}
+
+.bg-accent-gradient {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  background-size: 200% 200%;
+}
+
+.bg-dark-gradient {
+  background: linear-gradient(135deg, var(--dark), var(--dark-light));
+  background-size: 200% 200%;
+}
+
+/* Animation classes */
+.animate-gradient-flow {
+  animation: gradientFlow 3s ease infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-custom {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-primary-gradient text-white py-4 px-8 rounded-lg shadow-md hover:scale-105 transition-transform font-montserrat font-semibold text-base tracking-wider;
+}
+
+.btn-secondary {
+  @apply bg-transparent border-2 border-primary text-primary py-3.5 px-7 rounded-lg hover:bg-primary hover:bg-opacity-10 transition-colors font-montserrat font-semibold text-base tracking-wider;
+}
+
+/* Form element styles */
+.form-input {
+  @apply bg-dark border border-white/10 rounded-lg py-3 px-4 text-white focus:border-primary-light outline-none w-full;
+}
+
+/* Card styles */
+.card {
+  @apply bg-dark-light rounded-xl p-6 shadow-md border border-white/10;
+}
+
+/* Progress indicator for multi-step form */
+.progress-indicator {
+  @apply flex items-center justify-between w-full mb-8;
+}
+
+.progress-step {
+  @apply flex flex-col items-center;
+}
+
+.progress-circle {
+  @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium mb-2;
+}
+
+.progress-circle.active {
+  @apply bg-primary-gradient text-white;
+}
+
+.progress-circle.completed {
+  @apply bg-secondary text-white;
+}
+
+.progress-circle.incomplete {
+  @apply bg-gray-light text-gray-dark;
+}
+
+.progress-line {
+  @apply h-1 bg-gray-light flex-grow mx-2;
+}
+
+.progress-line.active {
+  @apply bg-primary;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .btn-primary, .btn-secondary {
+    @apply py-3 px-6;
+  }
+  
+  .progress-indicator {
+    @apply overflow-x-auto pb-4;
+  }
+}

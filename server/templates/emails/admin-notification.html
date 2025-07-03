@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Reseller Application</title>
+  <style>
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      background-color: #f9fafb;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #ffffff;
+    }
+    .header {
+      background-color: #8b5cf6;
+      padding: 20px;
+      text-align: center;
+      color: white;
+    }
+    .content {
+      padding: 20px;
+    }
+    .footer {
+      background-color: #f4f5f7;
+      padding: 15px;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .button {
+      display: inline-block;
+      background-color: #8b5cf6;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+    h1, h2 {
+      color: #1f2937;
+    }
+    .alert {
+      background-color: #f3f4f6;
+      border-left: 4px solid #8b5cf6;
+      padding: 10px 15px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>AHP MOD 2.0 Admin</h1>
+    </div>
+    <div class="content">
+      <h2>New Reseller Application</h2>
+      <p>A new reseller application has been submitted.</p>
+      
+      <div class="alert">
+        <p><strong>Application Details:</strong></p>
+        <p>Company: <strong>{{companyName}}</strong></p>
+        <p>Contact: <strong>{{contactName}}</strong></p>
+        <p>Application ID: <strong>{{applicationId}}</strong></p>
+      </div>
+      
+      <p>Please review this application at your earliest convenience.</p>
+      
+      <a href="https://admin.aihandshake.org/applications/{{applicationId}}" class="button">Review Application</a>
+      
+      <p>This is an automated notification. Please do not reply to this email.</p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2025 AHP MOD 2.0. All rights reserved.</p>
+      <p>Admin Portal: admin.aihandshake.org</p>
+    </div>
+  </div>
+</body>
+</html>
