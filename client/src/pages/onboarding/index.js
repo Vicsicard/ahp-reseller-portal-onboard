@@ -7,8 +7,6 @@ import ProgressIndicator from '../../components/ProgressIndicator';
 import BusinessInfo from '../../components/onboarding/BusinessInfo';
 import ContactInfo from '../../components/onboarding/ContactInfo';
 import ResellerProfile from '../../components/onboarding/ResellerProfile';
-import TechnicalReadiness from '../../components/onboarding/TechnicalReadiness';
-import SalesMarketing from '../../components/onboarding/SalesMarketing';
 import TermsConfirmation from '../../components/onboarding/TermsConfirmation';
 
 export default function Onboarding() {
@@ -34,19 +32,8 @@ export default function Onboarding() {
     servicesOffered: [],
     aiSeoExperience: '',
     
-    // Technical Readiness
-    expertiseLevel: '',
-    apiFamiliarity: '',
-    integrationPreference: '',
-    
-    // Sales & Marketing
-    projectedSalesVolume: '',
-    marketingChannels: [],
-    positioningPlan: '',
-    
     // Terms & Confirmation
     acceptedTerms: false,
-    commissionModel: '',
     paymentPreference: '',
     
     // Branding preferences
@@ -62,8 +49,6 @@ export default function Onboarding() {
     'Business Info',
     'Contact Info',
     'Reseller Profile',
-    'Technical',
-    'Sales & Marketing',
     'Terms'
   ];
   
@@ -180,35 +165,9 @@ export default function Onboarding() {
         }
         break;
         
-      case 3: // Technical Readiness
-        if (!formData.expertiseLevel) {
-          errors.expertiseLevel = 'Expertise level is required';
-          isValid = false;
-        }
-        if (!formData.integrationPreference) {
-          errors.integrationPreference = 'Integration preference is required';
-          isValid = false;
-        }
-        break;
-        
-      case 4: // Sales & Marketing
-        if (!formData.projectedSalesVolume) {
-          errors.projectedSalesVolume = 'Projected sales volume is required';
-          isValid = false;
-        }
-        if (formData.marketingChannels.length === 0) {
-          errors.marketingChannels = 'At least one marketing channel is required';
-          isValid = false;
-        }
-        break;
-        
-      case 5: // Terms & Confirmation
+      case 3: // Terms & Confirmation
         if (!formData.acceptedTerms) {
           errors.acceptedTerms = 'You must accept the terms and conditions';
-          isValid = false;
-        }
-        if (!formData.commissionModel) {
-          errors.commissionModel = 'Commission model selection is required';
           isValid = false;
         }
         break;
@@ -312,23 +271,6 @@ export default function Onboarding() {
           />
         );
       case 3:
-        return (
-          <TechnicalReadiness 
-            formData={formData} 
-            handleChange={handleChange} 
-            errors={formErrors}
-          />
-        );
-      case 4:
-        return (
-          <SalesMarketing 
-            formData={formData} 
-            handleChange={handleChange} 
-            handleArrayChange={handleArrayChange}
-            errors={formErrors}
-          />
-        );
-      case 5:
         return (
           <TermsConfirmation 
             formData={formData} 

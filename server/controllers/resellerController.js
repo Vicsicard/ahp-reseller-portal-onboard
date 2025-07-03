@@ -1,7 +1,10 @@
 const Reseller = require('../models/Reseller');
+const User = require('../models/User');
 const { generateToken, validateToken } = require('../utils/tokenUtils');
 const { uploadImage } = require('../utils/fileUpload');
 const sendEmail = require('../utils/emailService');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 /**
  * Save application progress
@@ -208,10 +211,10 @@ exports.getApplicationStatus = async (req, res) => {
     if (!token) {
       return res.status(400).json({
         success: false,
-        message: 'No token provided.'
+        message: 'Token is required.'
       });
     }
-
+    
     const reseller = await Reseller.findOne({ saveToken: token });
     
     if (!reseller) {
@@ -220,17 +223,247 @@ exports.getApplicationStatus = async (req, res) => {
         message: 'No application found with this token.'
       });
     }
-
+    
     return res.status(200).json({
       success: true,
       status: reseller.status,
-      updatedAt: reseller.updatedAt
+      message: `Application status: ${reseller.status}`
     });
   } catch (error) {
     console.error('Error getting application status:', error);
     return res.status(500).json({
       success: false,
-      message: 'An error occurred while retrieving your application status.',
+      message: 'An error occurred while retrieving application status.',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get reseller application data by token
+ * @route GET /api/resellers/application
+ * @access Public
+ */
+exports.getResellerApplication = async (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token is required.'
+      });
+    }
+    
+    const reseller = await Reseller.findOne({ saveToken: token });
+    
+    if (!reseller) {
+      return res.status(404).json({
+        success: false,
+        message: 'No application found with this token.'
+      });
+    }
+    
+    // Check if user account already exists for this reseller
+    const existingUser = await User.findOne({ resellerId: reseller._id });
+    
+    return res.status(200).json({
+      success: true,
+      reseller: {
+        id: reseller._id,
+        companyName: reseller.companyName,
+        contactName: reseller.contactName,
+        contactEmail: reseller.contactEmail,
+        status: reseller.status,
+        hasAccount: !!existingUser
+      }
+    });
+  } catch (error) {
+    console.error('Error getting reseller application:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while retrieving application data.',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Create reseller user account
+ * @route POST /api/resellers/create-account
+ * @access Public
+ */
+exports.createResellerAccount = async (req, res) => {
+  try {
+    const { token, email, password } = req.body;
+    
+    if (!token || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token, email, and password are required.'
+      });
+    }
+    
+    // Find the reseller application
+    const reseller = await Reseller.findOne({ saveToken: token });
+    
+    if (!reseller) {
+      return res.status(404).json({
+        success: false,
+        message: 'No application found with this token.'
+      });
+    }
+    
+    // Check if user already exists with this email
+    const existingUser = await User.findOne({ email });
+    
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'A user with this email already exists.'
+      });
+    }
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Create user account
+    const user = new User({
+      email,
+      password: hashedPassword,
+      resellerId: reseller._id,
+      role: 'reseller',
+      name: reseller.contactName
+    });
+    
+    await user.save();
+    
+    // Update reseller status to 'active'
+    reseller.status = 'active';
+    await reseller.save();
+    
+    // Generate JWT token for authentication
+    const authToken = jwt.sign(
+      { id: user._id, role: user.role, resellerId: user.resellerId },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    // Send welcome email
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Welcome to AHP MOD 2.0 Reseller Portal',
+        text: `Welcome to AHP MOD 2.0 Reseller Portal! Your account has been created successfully. You can now access your reseller portal.`,
+        html: `
+          <h1>Welcome to AHP MOD 2.0 Reseller Portal!</h1>
+          <p>Your account has been created successfully.</p>
+          <p>You can now access your reseller portal at: <a href="${process.env.CLIENT_URL}/portal/${reseller._id}">Your Reseller Portal</a></p>
+        `
+      });
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError);
+      // Continue even if email fails
+    }
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      token: authToken,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        resellerId: user.resellerId
+      }
+    });
+  } catch (error) {
+    console.error('Error creating reseller account:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while creating your account.',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Reseller login
+ * @route POST /api/resellers/login
+ * @access Public
+ */
+exports.loginReseller = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required.'
+      });
+    }
+    
+    // Find user by email
+    const user = await User.findOne({ email, role: 'reseller' });
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials.'
+      });
+    }
+    
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials.'
+      });
+    }
+    
+    // Get reseller data
+    const reseller = await Reseller.findById(user.resellerId);
+    
+    if (!reseller) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reseller account not found.'
+      });
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role, resellerId: user.resellerId },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    return res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        resellerId: user.resellerId
+      },
+      reseller: {
+        id: reseller._id,
+        companyName: reseller.companyName,
+        logoUrl: reseller.logoUrl,
+        primaryColor: reseller.primaryColor
+      }
+    });
+  } catch (error) {
+    console.error('Error logging in:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while logging in.',
       error: error.message
     });
   }

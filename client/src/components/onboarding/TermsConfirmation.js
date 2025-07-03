@@ -1,13 +1,6 @@
 import React from 'react';
 
 const TermsConfirmation = ({ formData, handleChange, handleColorChange, handleFileChange, errors }) => {
-  const commissionModels = [
-    'Revenue Share (30%)',
-    'Revenue Share (20% + Annual Fee)',
-    'Flat Fee Per Client',
-    'Custom Model'
-  ];
-
   const paymentPreferences = [
     'Direct Deposit',
     'PayPal',
@@ -24,30 +17,6 @@ const TermsConfirmation = ({ formData, handleChange, handleColorChange, handleFi
       </p>
 
       <div className="space-y-8">
-        {/* Commission Model */}
-        <div>
-          <label htmlFor="commissionModel" className="block text-sm font-medium text-gray-light mb-2">
-            Preferred Commission Model *
-          </label>
-          <select
-            id="commissionModel"
-            name="commissionModel"
-            value={formData.commissionModel}
-            onChange={handleChange}
-            className={`form-input ${errors.commissionModel ? 'border-red-500' : ''}`}
-          >
-            <option value="">Select commission model</option>
-            {commissionModels.map((model) => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))}
-          </select>
-          {errors.commissionModel && (
-            <p className="mt-1 text-sm text-red-500">{errors.commissionModel}</p>
-          )}
-        </div>
-
         {/* Payment Preference */}
         <div>
           <label htmlFor="paymentPreference" className="block text-sm font-medium text-gray-light mb-2">
