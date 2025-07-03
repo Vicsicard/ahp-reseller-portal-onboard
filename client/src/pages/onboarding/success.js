@@ -1,0 +1,306 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+
+export default function OnboardingSuccess() {
+  const router = useRouter();
+  const { token } = router.query;
+  
+  const [reseller, setReseller] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [setupStatus, setSetupStatus] = useState('loading'); // 'loading', 'complete', 'error'
+  const [redirectCountdown, setRedirectCountdown] = useState(10);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [portalUrl, setPortalUrl] = useState('');
+  const [oneTimeToken, setOneTimeToken] = useState('');
+
+  // Fetch reseller data using the token
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchResellerData = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/resellers/application?token=${token}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch reseller data');
+        }
+        
+        const data = await response.json();
+        setReseller(data.reseller);
+        
+        // Set email and generate portal URL
+        if (data.reseller?.contactEmail) {
+          const email = data.reseller.contactEmail;
+          const companySlug = data.reseller.companyName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+          
+          // In production, this would be a subdomain
+          // const url = `https://${companySlug}.portal.aihandshake.org`;
+          
+          // For development, we'll use a path-based approach
+          const url = `/portal/${companySlug}`;
+          setPortalUrl(url);
+          
+          // Start the account setup process
+          setupResellerAccount(email);
+        }
+      } catch (err) {
+        console.error('Error fetching reseller data:', err);
+        setError('Unable to retrieve your application information. Please contact support.');
+        setSetupStatus('error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchResellerData();
+  }, [token]);
+
+  // Setup reseller account with email as both username and password
+  const setupResellerAccount = useCallback(async (email) => {
+    if (!token || !email) return;
+    
+    try {
+      // Poll the backend to check if setup is complete
+      const checkSetupStatus = async () => {
+        try {
+          // In a real implementation, this would be a separate API endpoint
+          // that checks the status of the account setup process
+          const response = await fetch(`http://localhost:5000/api/resellers/application?token=${token}`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to check setup status');
+          }
+          
+          // For demo purposes, we'll simulate the backend processing time
+          // In a real implementation, this would check the actual status
+          setTimeout(() => {
+            // Create the account using the email as both username and password
+            createAccount(email, email);
+          }, 5000); // Simulate 5 seconds of backend processing
+          
+        } catch (err) {
+          console.error('Error checking setup status:', err);
+          setSetupStatus('error');
+        }
+      };
+      
+      // Start checking the setup status
+      checkSetupStatus();
+      
+    } catch (err) {
+      console.error('Error setting up reseller account:', err);
+      setSetupStatus('error');
+    }
+  }, [token]);
+  
+  // Create the account with the provided credentials
+  const createAccount = async (email, password) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/resellers/create-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          email,
+          password,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setOneTimeToken(data.token);
+        setSetupStatus('complete');
+        
+        // Start the redirect countdown if auto-redirect is enabled
+        startRedirectCountdown();
+      } else {
+        setError(data.message || 'Failed to create account');
+        setSetupStatus('error');
+      }
+    } catch (err) {
+      console.error('Error creating account:', err);
+      setError('An error occurred while setting up your account');
+      setSetupStatus('error');
+    }
+  };
+
+  // Start the redirect countdown
+  const startRedirectCountdown = useCallback(() => {
+    setIsRedirecting(true);
+    
+    const countdownInterval = setInterval(() => {
+      setRedirectCountdown(prevCount => {
+        if (prevCount <= 1) {
+          clearInterval(countdownInterval);
+          // Redirect to portal with one-time token
+          router.push(`${portalUrl}?token=${oneTimeToken}`);
+          return 0;
+        }
+        return prevCount - 1;
+      });
+    }, 1000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(countdownInterval);
+  }, [portalUrl, oneTimeToken, router]);
+  
+  // Handle manual redirect to portal
+  const handleRedirectToPortal = () => {
+    router.push(`${portalUrl}?token=${oneTimeToken}`);
+  };
+
+  // Render loading state for initial data fetch
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your application details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Error</h2>
+            <p className="text-gray-600">{error}</p>
+            <div className="mt-6">
+              <Link href="/onboarding" className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                Return to Onboarding
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main success page with top info section and bottom loading/credentials section
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        {/* Top section: Welcome, instructions, support info */}
+        <div className="bg-white p-8 rounded-lg shadow-md mb-8">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted Successfully!</h1>
+            <p className="text-gray-600">Thank you for applying to become an AHP MOD 2.0 reseller.</p>
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-medium text-gray-900 mb-2">Next Steps</h2>
+              <p className="text-gray-600 mb-4">We're setting up your reseller portal now. Once complete, you'll have access to:</p>
+              <ul className="list-disc pl-5 space-y-2 text-gray-600">
+                <li>Your personalized reseller dashboard</li>
+                <li>Product catalog and pricing information</li>
+                <li>Marketing materials and resources</li>
+                <li>Order management tools</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h2 className="text-lg font-medium text-gray-900 mb-2">Support Information</h2>
+              <p className="text-gray-600 mb-2">If you have any questions or need assistance:</p>
+              <p className="text-gray-800"><span className="font-medium">Email:</span> <a href="mailto:support@aihandshake.org" className="text-blue-600 hover:underline">support@aihandshake.org</a></p>
+              <p className="text-gray-800"><span className="font-medium">Phone:</span> (800) 555-0123</p>
+            </div>
+            
+            <div>
+              <h2 className="text-lg font-medium text-gray-900 mb-2">Security Note</h2>
+              <p className="text-gray-600">For security purposes, you'll need to change your password after your first login. Your initial login credentials will be displayed below once your portal is ready.</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Bottom section: Loading spinner or credentials */}
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          {setupStatus === 'loading' ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Setting up your reseller portal...</p>
+              <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
+            </div>
+          ) : setupStatus === 'error' ? (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Setup Error</h3>
+              <p className="text-gray-600 mb-4">{error || 'There was a problem setting up your portal.'}</p>
+              <button 
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-4">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Your Portal is Ready!</h3>
+              
+              <div className="bg-gray-50 p-4 rounded-md mb-6 max-w-sm mx-auto">
+                <h4 className="text-sm font-medium text-gray-500 mb-3">Login Credentials</h4>
+                <div className="space-y-2 text-left">
+                  <p className="text-sm"><span className="font-medium">Portal URL:</span> <a href={portalUrl} className="text-blue-600 hover:underline">{portalUrl}</a></p>
+                  <p className="text-sm"><span className="font-medium">Username:</span> {reseller?.contactEmail}</p>
+                  <p className="text-sm"><span className="font-medium">Password:</span> {reseller?.contactEmail} <span className="text-xs text-gray-500">(same as username)</span></p>
+                </div>
+              </div>
+              
+              {isRedirecting ? (
+                <div className="mt-6">
+                  <p className="text-sm text-gray-600 mb-2">Redirecting to your portal in {redirectCountdown} seconds...</p>
+                  <button 
+                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                    onClick={handleRedirectToPortal}
+                  >
+                    Go to Portal Now
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-6">
+                  <button 
+                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                    onClick={handleRedirectToPortal}
+                  >
+                    Access Your Portal
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

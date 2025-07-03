@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { generateToken, validateToken } = require('../utils/tokenUtils');
 const { uploadImage } = require('../utils/fileUpload');
 const sendEmail = require('../utils/emailService');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -283,6 +284,75 @@ exports.getResellerApplication = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'An error occurred while retrieving application data.',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Check setup status and generate one-time token
+ * @route GET /api/resellers/setup-status
+ * @access Public
+ */
+exports.checkSetupStatus = async (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token is required.'
+      });
+    }
+    
+    // Find the reseller application
+    const reseller = await Reseller.findOne({ saveToken: token });
+    
+    if (!reseller) {
+      return res.status(404).json({
+        success: false,
+        message: 'No application found with this token.'
+      });
+    }
+    
+    // Check if a user account already exists for this reseller
+    const existingUser = await User.findOne({ resellerId: reseller._id });
+    
+    if (existingUser) {
+      // Account already exists, generate a one-time token for portal access
+      const oneTimeToken = crypto.randomBytes(32).toString('hex');
+      
+      // Store the one-time token with the user (in a real implementation, this would have an expiration)
+      existingUser.oneTimeToken = oneTimeToken;
+      await existingUser.save();
+      
+      // Generate portal URL based on company name
+      const companySlug = reseller.companyName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      
+      return res.status(200).json({
+        success: true,
+        status: 'complete',
+        message: 'Setup is complete.',
+        portalUrl: `/portal/${companySlug}`,
+        oneTimeToken,
+        email: existingUser.email
+      });
+    }
+    
+    // If we get here, the account setup is still in progress
+    return res.status(200).json({
+      success: true,
+      status: 'in_progress',
+      message: 'Account setup is in progress.'
+    });
+  } catch (error) {
+    console.error('Error checking setup status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while checking setup status.',
       error: error.message
     });
   }

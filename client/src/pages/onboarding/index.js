@@ -186,7 +186,7 @@ export default function Onboarding() {
       setIsSubmitting(true);
       
       // API call to save progress
-      const response = await fetch('/api/save-progress', {
+      const response = await fetch('http://localhost:5000/api/save-progress', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -217,7 +217,7 @@ export default function Onboarding() {
         setIsSubmitting(true);
         
         // API call to submit form
-        const response = await fetch('/api/apply', {
+        const response = await fetch('http://localhost:5000/api/apply', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
