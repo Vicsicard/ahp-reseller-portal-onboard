@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 
 // Load environment variables
@@ -37,59 +37,56 @@ app.use((err, req, res, next) => {
   });
 });
 
-// MongoDB connection string (from .env or default)
-const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ahp-reseller-portal';
+// Using in-memory data for testing instead of MongoDB
+console.log('Using in-memory data store for testing');
 
-// Connect to MongoDB
-mongoose.connect(mongoURI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// In-memory data stores
+const inMemoryResellers = [];
+const inMemoryUsers = [];
 
-// Define Reseller schema
-const ResellerSchema = new mongoose.Schema({
-  companyName: { type: String, required: true },
-  contactName: { type: String, required: true },
-  contactEmail: { type: String, required: true },
-  status: { type: String, default: 'pending' },
-  saveToken: { type: String, required: true }
-}, { timestamps: true });
+// Add test reseller
+inMemoryResellers.push({
+  _id: '12345',
+  companyName: 'Test Company',
+  contactName: 'John Doe',
+  contactEmail: 'john.doe@example.com',
+  status: 'pending',
+  saveToken: 'test-token-123',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+});
 
-// Define User schema
-const UserSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, default: 'reseller' },
-  resellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Reseller' },
-  oneTimeToken: { type: String }
-}, { timestamps: true });
-
-// Create models
-const Reseller = mongoose.model('Reseller', ResellerSchema);
-const User = mongoose.model('User', UserSchema);
-
-// Create test data if none exists
-const createTestData = async () => {
-  try {
-    // Check if test reseller exists
-    const existingReseller = await Reseller.findOne({ saveToken: 'test-token-123' });
-    
-    if (!existingReseller) {
-      // Create test reseller
-      const testReseller = new Reseller({
-        companyName: 'Test Company',
-        contactName: 'John Doe',
-        contactEmail: 'john@example.com',
-        status: 'approved',
-        saveToken: 'test-token-123'
-      });
-      
-      await testReseller.save();
-      console.log('Test reseller created');
-    }
-  } catch (err) {
-    console.error('Error creating test data:', err);
+// Mock models using in-memory arrays instead of MongoDB
+const Reseller = {
+  findOne: (query) => {
+    return Promise.resolve(
+      inMemoryResellers.find(r => 
+        (query.saveToken && r.saveToken === query.saveToken) ||
+        (query.contactEmail && r.contactEmail === query.contactEmail)
+      )
+    );
+  },
+  save: function() {
+    return Promise.resolve(this);
   }
 };
+
+const User = {
+  findOne: (query) => {
+    return Promise.resolve(
+      inMemoryUsers.find(u => 
+        (query.email && u.email === query.email) ||
+        (query.resellerId && u.resellerId === query.resellerId)
+      )
+    );
+  },
+  save: function() {
+    return Promise.resolve(this);
+  }
+};
+
+// No need to create test data as we've already added it to the in-memory array
+console.log('Test data ready');
 
 // API Routes
 
@@ -115,8 +112,8 @@ app.post('/api/save-progress', async (req, res) => {
     // Generate a unique token for this application if not provided
     const token = saveToken || 'test-token-123'; // In a real app, generate a unique token
     
-    // Create or update reseller application
-    let reseller = await Reseller.findOne({ contactEmail });
+    // Create or update reseller application in memory
+    let reseller = inMemoryResellers.find(r => r.contactEmail === contactEmail);
     
     if (reseller) {
       // Update existing application
@@ -124,21 +121,23 @@ app.post('/api/save-progress', async (req, res) => {
       if (contactName) reseller.contactName = contactName;
       reseller.saveToken = token;
       // Update other fields as needed
-      
-      await reseller.save();
     } else {
       // Create new application
-      reseller = new Reseller({
+      reseller = {
+        _id: Date.now().toString(),
         companyName: companyName || '',
         contactName: contactName || '',
         contactEmail,
         status: 'draft',
-        saveToken: token
-        // Add other fields as needed
-      });
+        saveToken: token,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
       
-      await reseller.save();
+      inMemoryResellers.push(reseller);
     }
+    
+    console.log('Progress saved for:', contactEmail);
     
     return res.status(200).json({
       success: true,
@@ -180,7 +179,7 @@ app.post('/api/apply', (req, res) => {
   }
 });
 
-// Get reseller application by token - simplified version without MongoDB interaction
+// Get reseller application by token
 app.get('/api/resellers/application', (req, res) => {
   try {
     const { token } = req.query;
@@ -193,21 +192,25 @@ app.get('/api/resellers/application', (req, res) => {
       });
     }
     
-    // Return mock reseller data for testing
-    const mockReseller = {
-      _id: '12345',
-      companyName: 'Test Company',
-      contactName: 'John Doe',
-      contactEmail: 'john.doe@example.com',
-      status: 'pending',
-      saveToken: token,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    // Find reseller in memory
+    const reseller = inMemoryResellers.find(r => r.saveToken === token);
+    
+    if (!reseller) {
+      return res.status(404).json({
+        success: false,
+        message: 'No application found with this token.'
+      });
+    }
     
     return res.status(200).json({
       success: true,
-      data: mockReseller
+      reseller: {
+        id: reseller._id,
+        companyName: reseller.companyName,
+        contactName: reseller.contactName,
+        contactEmail: reseller.contactEmail,
+        status: reseller.status
+      }
     });
   } catch (error) {
     console.error('Error getting reseller application:', error);
@@ -291,7 +294,7 @@ app.post('/api/resellers/create-account', async (req, res) => {
       });
     }
     
-    const reseller = await Reseller.findOne({ saveToken: token });
+    const reseller = inMemoryResellers.find(r => r.saveToken === token);
     
     if (!reseller) {
       return res.status(404).json({
@@ -304,26 +307,30 @@ app.post('/api/resellers/create-account', async (req, res) => {
     const oneTimeToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     
     // Check if user exists
-    let user = await User.findOne({ resellerId: reseller._id });
+    let user = inMemoryUsers.find(u => u.resellerId === reseller._id);
     
     if (!user) {
       // Create user with provided credentials
-      user = new User({
+      user = {
+        _id: Date.now().toString(),
         email,
         password, // In a real app, this would be hashed
         role: 'reseller',
         resellerId: reseller._id,
-        oneTimeToken
-      });
+        oneTimeToken,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
       
-      await user.save();
+      inMemoryUsers.push(user);
     } else {
       // Update user credentials and one-time token
       user.email = email;
       user.password = password; // In a real app, this would be hashed
       user.oneTimeToken = oneTimeToken;
-      await user.save();
     }
+    
+    console.log('Account created for:', email);
     
     return res.status(200).json({
       success: true,
@@ -345,11 +352,10 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
-// Create test data
-createTestData();
+// No need to call createTestData() as we've already added test data
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
